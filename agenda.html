@@ -10,29 +10,75 @@
 
     <div class="space-y-4">
         {% for item in itens %}
-        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500 flex justify-between items-center">
-            <div>
-                <h3 class="font-bold text-gray-800">{{ item.tarefa }}</h3>
-                <p class="text-xs text-gray-500"><i class="far fa-clock mr-1"></i> {{ item.data_hora }}</p>
+        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 {{ 'border-green-500 opacity-60' if item.feito else 'border-blue-500' }} flex justify-between items-start">
+            <div class="flex-grow cursor-pointer agenda-item" 
+                 data-item='{{ item|tojson|safe }}'
+                 onclick='openEditAgenda(this)'>
+                <div class="flex items-center gap-2">
+                    {% if item.feito %}<i class="fas fa-check-circle text-green-500"></i>{% endif %}
+                    <h3 class="font-bold {{ 'line-through text-gray-400' if item.feito else 'text-gray-800' }}">{{ item.tarefa }}</h3>
+                </div>
+                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">{{ item.data_hora }} • {{ item.repeticao }}</p>
+                {% if item.descricao %}<p class="text-sm text-gray-600 mt-1 line-clamp-2">{{ item.descricao }}</p>{% endif %}
             </div>
-            <a href="{{ url_for('delete_agenda', id=item.id) }}" class="text-red-400 p-2"><i class="fas fa-trash"></i></a>
+            <div class="flex flex-col gap-2 ml-4">
+                <a href="{{ url_for('toggle_agenda', id=item.id) }}" class="text-blue-500 bg-blue-50 p-2 rounded-lg text-center"><i class="fas {{ 'fa-undo' if item.feito else 'fa-check' }}"></i></a>
+                <a href="{{ url_for('delete_agenda', id=item.id) }}" onclick="return confirm('Excluir?')" class="text-red-400 bg-red-50 p-2 rounded-lg text-center"><i class="fas fa-trash"></i></a>
+            </div>
         </div>
         {% endfor %}
     </div>
 </div>
 
-<!-- Modal Novo Lembrete -->
-<div id="modal-agenda" class="fixed inset-0 bg-black/50 hidden z-[70] flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl p-6 w-full max-w-sm">
-        <h3 class="font-bold mb-4">Novo Compromisso</h3>
-        <form action="{{ url_for('add_agenda') }}" method="post">
-            <input type="text" name="tarefa" placeholder="O que você precisa fazer?" class="w-full p-3 bg-gray-100 rounded-xl mb-3 border-none focus:ring-2 focus:ring-blue-500" required>
-            <input type="datetime-local" name="data_hora" class="w-full p-3 bg-gray-100 rounded-xl mb-4 border-none" required>
+<!-- Modal Agenda -->
+<div id="modal-agenda" class="fixed inset-0 bg-black/50 hidden z-[70] flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm my-auto">
+        <h3 id="agenda-title" class="font-bold mb-4">Novo Compromisso</h3>
+        <form id="agenda-form" action="{{ url_for('add_agenda') }}" method="post">
+            <input type="text" name="tarefa" id="field-tarefa" placeholder="Título" class="w-full p-3 bg-gray-100 rounded-xl mb-3 border-none" required>
+            <textarea name="descricao" id="field-desc" placeholder="Descrição/Notas" class="w-full p-3 bg-gray-100 rounded-xl mb-3 border-none text-sm"></textarea>
+            <input type="datetime-local" name="data_hora" id="field-data" class="w-full p-3 bg-gray-100 rounded-xl mb-3 border-none" required>
+            <select name="repeticao" id="field-rep" class="w-full p-3 bg-gray-100 rounded-xl mb-4 border-none text-sm">
+                <option value="Nenhuma">Não repetir</option>
+                <option value="Diário">Diário</option>
+                <option value="Semanal">Semanal</option>
+                <option value="Mensal">Mensal</option>
+            </select>
             <div class="flex justify-end gap-2">
-                <button type="button" onclick="this.closest('.fixed').classList.add('hidden')" class="px-4 py-2 text-gray-500">Cancelar</button>
+                <button type="button" onclick="closeAgendaModal()" class="px-4 py-2 text-gray-500">Cancelar</button>
                 <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold">Salvar</button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    function openEditAgenda(item) {
+        const modal = document.getElementById('modal-agenda');
+        const form = document.getElementById('agenda-form');
+        
+        document.getElementById('agenda-title').innerText = "Editar Compromisso";
+        form.action = "/agenda/edit/" + item.id;
+        
+        document.getElementById('field-tarefa').value = item.tarefa;
+        document.getElementById('field-desc').value = item.descricao || '';
+        // Converte formato do SQLite (YYYY-MM-DD HH:MM) para o input (YYYY-MM-DDTHH:MM)
+        if(item.data_hora) {
+            document.getElementById('field-data').value = item.data_hora.replace(' ', 'T');
+        }
+        document.getElementById('field-rep').value = item.repeticao;
+        
+        modal.classList.remove('hidden');
+    }
+
+    function closeAgendaModal() {
+        const modal = document.getElementById('modal-agenda');
+        const form = document.getElementById('agenda-form');
+        
+        modal.classList.add('hidden');
+        form.reset();
+        document.getElementById('agenda-title').innerText = "Novo Compromisso";
+        form.action = "{{ url_for('add_agenda') }}";
+    }
+</script>
 {% endblock %}

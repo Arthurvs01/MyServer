@@ -5,6 +5,22 @@
     <h1 class="text-3xl font-bold text-blue-600">Olá, {{ nome }}!</h1>
     <p class="mt-2 text-gray-500">Servidor Redmi 10C Online</p>
 
+    <!-- Status do Sistema -->
+    <div class="grid grid-cols-3 gap-2 mt-6 max-w-md mx-auto">
+        <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+            <div class="text-[10px] text-gray-400 font-bold">BATERIA</div>
+            <div class="text-lg font-bold text-green-500">{{ stats.bateria }}%</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+            <div class="text-[10px] text-gray-400 font-bold">RAM</div>
+            <div class="text-lg font-bold text-blue-500">{{ stats.ram }}%</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+            <div class="text-[10px] text-gray-400 font-bold">CPU</div>
+            <div class="text-lg font-bold text-red-500">{{ stats.cpu }}%</div>
+        </div>
+    </div>
+
     <!-- Lembretes Próximos -->
     <div class="mt-8 mx-auto max-w-md">
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-left">

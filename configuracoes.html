@@ -11,6 +11,14 @@
                 <label class="text-xs text-gray-500 ml-1">Seu Nome</label>
                 <input type="text" name="usuario_nome" value="{{ configs.usuario_nome }}" class="w-full p-3 bg-gray-100 rounded-xl border-none">
             </div>
+            <div>
+                <label class="text-xs text-gray-500 ml-1">Comando SSH do Terminal</label>
+                <input type="text" name="ssh_cmd" value="{{ configs.ssh_cmd }}" class="w-full p-3 bg-gray-100 rounded-xl border-none font-mono text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 ml-1">Senha SSH</label>
+                <input type="password" name="ssh_password" value="{{ configs.ssh_password }}" class="w-full p-3 bg-gray-100 rounded-xl border-none font-mono text-sm">
+            </div>
             <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold">Salvar Alterações</button>
         </form>
     </div>
