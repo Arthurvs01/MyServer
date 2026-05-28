@@ -1,9 +1,119 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="mt-10">
-    <h1 class="text-2xl font-bold mb-4">Terminal Remoto</h1>
-    <div class="bg-black text-green-500 font-mono p-4 rounded-lg shadow-2xl min-h-[300px]">
-        $ Aguardando conexão com o shell do Termux...
+<div class="max-w-5xl mx-auto">
+    <h1 class="text-2xl font-bold mb-4 text-gray-800">Terminal Termux</h1>
+    
+    <div id="terminal-container" class="bg-black rounded-lg shadow-2xl overflow-hidden flex flex-col h-[70vh]">
+        <!-- Área de Output -->
+        <div id="terminal-output" class="p-4 font-mono text-sm text-green-400 overflow-y-auto flex-grow whitespace-pre-wrap">
+            <div class="text-gray-500 italic mb-2">Conectado ao Redmi 10C via {{ request.host }}...</div>
+        </div>
+
+        <!-- Linha de Comando -->
+        <div class="bg-zinc-900 p-2 flex items-center border-t border-zinc-800">
+            <span id="prompt-label" class="text-blue-400 font-mono text-sm mr-2 truncate max-w-[40%]">{{ cwd }} $</span>
+            <input type="text" id="terminal-input" 
+                   class="bg-transparent border-none outline-none text-white font-mono text-sm flex-grow"
+                   placeholder="Digite um comando..."
+                   autofocus
+                   autocomplete="off">
+        </div>
+    </div>
+    
+    <div class="mt-4 flex gap-4 text-xs text-gray-500">
+        <span><kbd class="bg-gray-200 px-1 rounded">Enter</kbd> para executar</span>
+        <span><kbd class="bg-gray-200 px-1 rounded">Ctrl + L</kbd> para limpar</span>
     </div>
 </div>
+
+<script>
+    const input = document.getElementById('terminal-input');
+    const output = document.getElementById('terminal-output');
+    const promptLabel = document.getElementById('prompt-label');
+    
+    let currentCwd = "{{ cwd }}";
+    let commandHistory = [];
+    let historyIndex = -1;
+
+    // Mantém o foco no input ao clicar no terminal
+    document.getElementById('terminal-container').onclick = () => input.focus();
+
+    input.addEventListener('keydown', async (e) => {
+        // Executar comando
+        if (e.key === 'Enter' && !e.shiftKey) {
+            const command = input.value.trim();
+            if (!command) return;
+
+            // Limpar tela (comando local do browser)
+            if (command === 'clear') {
+                output.innerHTML = '';
+                input.value = '';
+                return;
+            }
+
+            // Adicionar ao histórico
+            commandHistory.unshift(command);
+            historyIndex = -1;
+
+            // Exibir comando no output
+            output.innerHTML += `<div class="text-white"><span class="text-blue-400">${currentCwd} $</span> ${command}</div>`;
+            input.value = '';
+            input.disabled = true;
+
+            try {
+                const response = await fetch('/terminal/executar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comando: command, diretorio: currentCwd })
+                });
+                
+                const data = await response.json();
+                
+                if (data.output) {
+                    output.innerHTML += `<div>${data.output}</div>`;
+                }
+                
+                // Atualiza o diretório se houver mudança
+                if (data.cwd) {
+                    currentCwd = data.cwd;
+                    promptLabel.innerText = `${currentCwd} $`;
+                }
+
+            } catch (err) {
+                output.innerHTML += `<div class="text-red-500">Erro de conexão com o servidor.</div>`;
+            }
+
+            input.disabled = false;
+            input.focus();
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Navegação no histórico (Seta para cima/baixo)
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                input.value = commandHistory[historyIndex];
+            }
+        }
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyIndex > -1) {
+                historyIndex--;
+                input.value = historyIndex === -1 ? '' : commandHistory[historyIndex];
+            }
+        }
+
+        // Atalho Ctrl+L para limpar
+        if (e.ctrlKey && e.key === 'l') {
+            e.preventDefault();
+            output.innerHTML = '';
+        }
+    });
+</script>
+
+<style>
+    #terminal-output::-webkit-scrollbar { width: 8px; }
+    #terminal-output::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+</style>
 {% endblock %}
