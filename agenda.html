@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Agenda</h1>
+        <button onclick="document.getElementById('modal-agenda').classList.remove('hidden')" class="bg-blue-600 text-white p-2 rounded-full shadow-lg">
+            <i class="fas fa-plus"></i>
+        </button>
+    </div>
+
+    <div class="space-y-4">
+        {% for item in itens %}
+        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500 flex justify-between items-center">
+            <div>
+                <h3 class="font-bold text-gray-800">{{ item.tarefa }}</h3>
+                <p class="text-xs text-gray-500"><i class="far fa-clock mr-1"></i> {{ item.data_hora }}</p>
+            </div>
+            <a href="{{ url_for('delete_agenda', id=item.id) }}" class="text-red-400 p-2"><i class="fas fa-trash"></i></a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Novo Lembrete -->
+<div id="modal-agenda" class="fixed inset-0 bg-black/50 hidden z-[70] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm">
+        <h3 class="font-bold mb-4">Novo Compromisso</h3>
+        <form action="{{ url_for('add_agenda') }}" method="post">
+            <input type="text" name="tarefa" placeholder="O que você precisa fazer?" class="w-full p-3 bg-gray-100 rounded-xl mb-3 border-none focus:ring-2 focus:ring-blue-500" required>
+            <input type="datetime-local" name="data_hora" class="w-full p-3 bg-gray-100 rounded-xl mb-4 border-none" required>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="this.closest('.fixed').classList.add('hidden')" class="px-4 py-2 text-gray-500">Cancelar</button>
+                <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

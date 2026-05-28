@@ -16,10 +16,19 @@ if not os.path.exists(DRIVE_ROOT):
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS ferramentas (id INTEGER PRIMARY KEY, nome TEXT, url TEXT)")
+        conn.execute("CREATE TABLE IF NOT EXISTS lembretes (id INTEGER PRIMARY KEY AUTOINCREMENT, tarefa TEXT, data_hora TEXT)")
+        conn.execute("CREATE TABLE IF NOT EXISTS notas (id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT, conteudo TEXT, data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        conn.execute("CREATE TABLE IF NOT EXISTS config (id INTEGER PRIMARY KEY, chave TEXT UNIQUE, valor TEXT)")
+        # Valor padrão para o nome do usuário
+        conn.execute("INSERT OR IGNORE INTO config (chave, valor) VALUES ('usuario_nome', 'Usuário')")
 
 @app.route('/')
 def home():
-    return render_template('home.html', title="Home")
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        lembretes = conn.execute("SELECT * FROM lembretes WHERE data_hora >= datetime('now', 'localtime') ORDER BY data_hora ASC LIMIT 3").fetchall()
+        nome = conn.execute("SELECT valor FROM config WHERE chave = 'usuario_nome'").fetchone()['valor']
+    return render_template('home.html', title="Home", lembretes=lembretes, nome=nome)
 
 @app.route('/arquivos/')
 @app.route('/arquivos/<path:subpath>')
@@ -132,6 +141,84 @@ def executar_comando():
         return jsonify({'output': output, 'cwd': diretorio_atual})
     except Exception as e:
         return jsonify({'output': f'Erro: {str(e)}\n', 'cwd': diretorio_atual})
+
+# --- AGENDA ---
+@app.route('/agenda')
+def agenda():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        itens = conn.execute("SELECT * FROM lembretes ORDER BY data_hora ASC").fetchall()
+    return render_template('agenda.html', title="Agenda", itens=itens)
+
+@app.route('/agenda/add', methods=['POST'])
+def add_agenda():
+    tarefa = request.form.get('tarefa')
+    data_hora = request.form.get('data_hora')
+    if tarefa and data_hora:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute("INSERT INTO lembretes (tarefa, data_hora) VALUES (?, ?)", (tarefa, data_hora.replace('T', ' ')))
+    return redirect(url_for('agenda'))
+
+@app.route('/agenda/delete/<int:id>')
+def delete_agenda(id):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("DELETE FROM lembretes WHERE id = ?", (id,))
+    return redirect(url_for('agenda'))
+
+# --- NOTAS ---
+@app.route('/notas')
+def notas():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        notas_list = conn.execute("SELECT * FROM notas ORDER BY data_criacao DESC").fetchall()
+    return render_template('notas.html', title="Notas", notas=notas_list)
+
+@app.route('/notas/add', methods=['POST'])
+def add_nota():
+    titulo = request.form.get('titulo')
+    conteudo = request.form.get('conteudo')
+    if titulo:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute("INSERT INTO notas (titulo, conteudo) VALUES (?, ?)", (titulo, conteudo))
+    return redirect(url_for('notas'))
+
+@app.route('/notas/edit/<int:id>', methods=['POST'])
+def edit_nota(id):
+    titulo = request.form.get('titulo')
+    conteudo = request.form.get('conteudo')
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("UPDATE notas SET titulo = ?, conteudo = ? WHERE id = ?", (titulo, conteudo, id))
+    return redirect(url_for('notas'))
+
+@app.route('/notas/delete/<int:id>')
+def delete_nota(id):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("DELETE FROM notas WHERE id = ?", (id,))
+    return redirect(url_for('notas'))
+
+# --- CONFIGURAÇÕES ---
+@app.route('/configuracoes')
+def configuracoes():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        configs = conn.execute("SELECT * FROM config").fetchall()
+        # Transformar em dicionário para facilitar no template
+        cfg_dict = {row['chave']: row['valor'] for row in configs}
+        
+        # Estatísticas simples
+        stats = {
+            'arquivos': sum([len(files) for r, d, files in os.walk(DRIVE_ROOT)]),
+            'notas': conn.execute("SELECT COUNT(*) FROM notas").fetchone()[0],
+            'lembretes': conn.execute("SELECT COUNT(*) FROM lembretes").fetchone()[0]
+        }
+    return render_template('configuracoes.html', title="Configurações", configs=cfg_dict, stats=stats)
+
+@app.route('/configuracoes/update', methods=['POST'])
+def update_config():
+    nome = request.form.get('usuario_nome')
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("UPDATE config SET valor = ? WHERE chave = 'usuario_nome'", (nome,))
+    return redirect(url_for('configuracoes'))
 
 if __name__ == '__main__':
     init_db()
