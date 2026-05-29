@@ -40,7 +40,8 @@
 </div>
 
 <script>
-function openEditNota(nota) {
+function openEditNota(element) {
+    const nota = JSON.parse(element.getAttribute('data-nota'));
     document.getElementById('nota-modal-title').innerText = "Editar Nota";
     document.getElementById('nota-form').action = "/notas/edit/" + nota.id;
     document.getElementById('nota-titulo').value = nota.titulo;

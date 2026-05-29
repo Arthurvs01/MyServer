@@ -32,6 +32,8 @@ def init_db():
             conn.execute("ALTER TABLE lembretes ADD COLUMN repeticao TEXT DEFAULT 'Nenhuma'")
         if 'feito' not in colunas_existentes:
             conn.execute("ALTER TABLE lembretes ADD COLUMN feito INTEGER DEFAULT 0")
+        if 'descricao' not in colunas_existentes:
+            conn.execute("ALTER TABLE lembretes ADD COLUMN descricao TEXT")
 
         conn.execute("CREATE TABLE IF NOT EXISTS notas (id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT, conteudo TEXT, data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         conn.execute("CREATE TABLE IF NOT EXISTS config (id INTEGER PRIMARY KEY, chave TEXT UNIQUE, valor TEXT)")
@@ -275,7 +277,8 @@ def delete_agenda(id):
 def notas():
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
-        notas_list = conn.execute("SELECT * FROM notas ORDER BY data_criacao DESC").fetchall()
+        rows = conn.execute("SELECT * FROM notas ORDER BY data_criacao DESC").fetchall()
+        notas_list = [dict(row) for row in rows]  # Converte Rows em Dicionários (Serializável)
     return render_template('notas.html', title="Notas", notas=notas_list)
 
 @app.route('/notas/add', methods=['POST'])
