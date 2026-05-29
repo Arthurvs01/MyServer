@@ -24,6 +24,15 @@ def init_db():
             repeticao TEXT DEFAULT 'Nenhuma',
             feito INTEGER DEFAULT 0
         )""")
+
+        # Migrações: Garante que colunas novas existam caso o banco tenha sido criado em versões anteriores
+        cursor = conn.execute("PRAGMA table_info(lembretes)")
+        colunas_existentes = [col[1] for col in cursor.fetchall()]
+        if 'repeticao' not in colunas_existentes:
+            conn.execute("ALTER TABLE lembretes ADD COLUMN repeticao TEXT DEFAULT 'Nenhuma'")
+        if 'feito' not in colunas_existentes:
+            conn.execute("ALTER TABLE lembretes ADD COLUMN feito INTEGER DEFAULT 0")
+
         conn.execute("CREATE TABLE IF NOT EXISTS notas (id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT, conteudo TEXT, data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         conn.execute("CREATE TABLE IF NOT EXISTS config (id INTEGER PRIMARY KEY, chave TEXT UNIQUE, valor TEXT)")
         conn.execute("INSERT OR IGNORE INTO config (chave, valor) VALUES ('usuario_nome', 'Usuário')")
