@@ -1,0 +1,79 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard - CasaPy{% endblock %}
+
+{% block content %}
+<section class="dashboard-grid">
+  <article class="card welcome-card">
+    <h2>Bem-vindo ao CasaPy</h2>
+    <p>Este painel foi pensado para executar em um Redmi10C via Termux.</p>
+    <p>Use o servidor para monitorar estado, rede e armazenamento remoto.</p>
+  </article>
+
+  <article class="card status-card">
+    <h3>Informações do sistema</h3>
+    <div class="status-list">
+      <div><strong>Host:</strong> <span id="host">{{ status.host }}</span></div>
+      <div><strong>SO:</strong> <span id="os">{{ status.os }}</span></div>
+      <div><strong>Release:</strong> <span id="release">{{ status.release }}</span></div>
+      <div><strong>Python:</strong> <span id="python_version">{{ status.python_version }}</span></div>
+      <div><strong>Uptime:</strong> <span id="uptime">{{ status.uptime }}</span></div>
+      <div><strong>Última atualização:</strong> <span id="timestamp">{{ status.timestamp }}</span></div>
+    </div>
+  </article>
+
+  <article class="card device-card">
+    <h3>Controle do aparelho</h3>
+    <div class="status-list">
+      <div><strong>Hostname:</strong> <span id="device-host">{{ device.host }}</span></div>
+      <div><strong>Sistema:</strong> <span id="device-os">{{ device.os }} {{ device.release }}</span></div>
+      <div><strong>Python:</strong> <span id="device-python">{{ device.python_version }}</span></div>
+      <div><strong>Bateria:</strong> <span id="battery-status">{{ device.battery.status or device.battery.message }}</span></div>
+      <div><strong>Nível:</strong> <span id="battery-level">{{ device.battery.capacity or '-' }}</span></div>
+    </div>
+    <div class="status-block">
+      <strong>Interfaces de rede</strong>
+      <ul id="network-list">
+        {% for iface in device.network.interfaces %}
+          <li>{{ iface.name }}: {{ iface.addresses | join(', ') }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+
+  <article class="card storage-card">
+    <h3>Armazenamento remoto</h3>
+    <div class="status-list">
+      <div><strong>Raiz:</strong> <span id="storage-root">{{ storage_summary.root }}</span></div>
+      <div><strong>Arquivos:</strong> <span id="storage-count">{{ storage_summary.total_files }}</span></div>
+      <div><strong>Total bytes:</strong> <span id="storage-size">{{ storage_summary.total_size_bytes }}</span></div>
+    </div>
+    <p>Use o armazenamento remoto via navegador em <code>/remote-storage</code> ou faça upload abaixo.</p>
+    <form id="upload-form" class="upload-form">
+      <label>Selecione arquivo</label>
+      <input type="file" name="file" required />
+      <label>Salvar em pasta (opcional)</label>
+      <input type="text" name="path" placeholder="subpasta/exemplo" />
+      <button type="submit">Enviar para armazenamento</button>
+    </form>
+    <div class="status-block">
+      <strong>Conteúdo atual</strong>
+      <table>
+        <thead>
+          <tr><th>Nome</th><th>Tipo</th><th>Tamanho</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="storage-list"></tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="card actions-card">
+    <h3>Ações rápidas</h3>
+    <div class="action-buttons">
+      <button type="button" onclick="loadStatus()">Atualizar sistema</button>
+      <button type="button" onclick="loadDevice()">Atualizar dispositivo</button>
+      <button type="button" onclick="loadStorage()">Atualizar armazenamento</button>
+    </div>
+  </article>
+</section>
+{% endblock %}

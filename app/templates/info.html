@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+
+{% block title %}Informações - CasaPy{% endblock %}
+
+{% block content %}
+<section class="info-section">
+  <h2>Informações do sistema</h2>
+
+  <div class="info-grid">
+    <article class="info-card">
+      <h3>📊 Status do sistema</h3>
+      <div class="info-list">
+        <div class="info-item">
+          <span class="label">Servidor:</span>
+          <span class="value">{{ status.host }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Sistema:</span>
+          <span class="value">{{ status.os }} {{ status.release }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Python:</span>
+          <span class="value">{{ status.python_version }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Tempo ativo:</span>
+          <span class="value">{{ status.uptime }}</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="info-card">
+      <h3>🔋 Bateria</h3>
+      <div class="info-list">
+        <div class="info-item">
+          <span class="label">Status:</span>
+          <span class="value">{{ device.battery.status or device.battery.message }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Nível:</span>
+          <span class="value">{{ device.battery.capacity or '-' }}</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="info-card full-width">
+      <h3>🌐 Interfaces de rede</h3>
+      <div class="network-list">
+        {% for iface in device.network.interfaces %}
+        <div class="network-item">
+          <span class="interface-name">{{ iface.name }}</span>
+          <span class="interface-state">{{ iface.state }}</span>
+          <div class="interface-addresses">
+            {% for addr in iface.addresses %}
+            <code>{{ addr }}</code>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+
+  <button class="btn-secondary" onclick="location.reload()">Atualizar informações</button>
+</section>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+
+{% block title %}Home - CasaPy{% endblock %}
+
+{% block content %}
+<section class="home-section">
+  <div class="welcome-container">
+    <h2>Bem-vindo, {{ username }}!</h2>
+    <p>Escolha uma seção para continuar:</p>
+
+    <div class="cards-grid">
+      <a href="/info" class="card-link info-card">
+        <div class="card-icon">📊</div>
+        <h3>Informações do sistema</h3>
+        <p>Veja status, rede e bateria do seu servidor</p>
+      </a>
+
+      <a href="/storage" class="card-link storage-card">
+        <div class="card-icon">💾</div>
+        <h3>Armazenamento remoto</h3>
+        <p>Gerencie seus arquivos e faça upload/download</p>
+      </a>
+
+      <div class="card info-card">
+        <div class="card-icon">🔧</div>
+        <h3>Em desenvolvimento</h3>
+        <p>Novas funcionalidades em breve</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

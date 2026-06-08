@@ -1,0 +1,193 @@
+{% extends "layout.html" %}
+
+{% block title %}Armazenamento - CasaPy{% endblock %}
+
+{% block content %}
+<section class="storage-section">
+  <div class="storage-header-new">
+    <div>
+      <h2>Armazenamento remoto</h2>
+      <div class="breadcrumb" id="breadcrumb">
+        <a href="#" onclick="navigateToPath('/')">📁 Raiz</a>
+      </div>
+    </div>
+    <div class="storage-stats-new">
+      <div class="stat-item-new">
+        <span class="stat-value" id="storage-count">{{ storage_summary.total_files }}</span>
+        <span class="stat-label">Arquivos</span>
+      </div>
+      <div class="stat-item-new">
+        <span class="stat-value" id="storage-size">{{ storage_summary.total_size_bytes }}</span>
+        <span class="stat-label">Bytes</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="upload-area" id="upload-area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+    <div class="upload-content">
+      <div class="upload-icon">📤</div>
+      <p>Arraste arquivos aqui ou <label class="upload-link">clique para selecionar</label></p>
+      <input type="file" id="file" name="file" multiple hidden />
+    </div>
+  </div>
+
+  <div class="storage-list-container-new" id="storage-list-container">
+    <div id="storage-list" class="storage-grid">
+      <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem 1rem;">Carregando...</div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPath = "/";
+
+const getFileIcon = (name, type) => {
+  if (type === "directory") return "📁";
+  const ext = name.split(".").pop().toLowerCase();
+  const icons = {
+    pdf: "📕", doc: "📗", docx: "📗", txt: "📄", md: "📄",
+    jpg: "🖼️", jpeg: "🖼️", png: "🖼️", gif: "🎨", svg: "🎨",
+    mp3: "🎵", mp4: "🎬", avi: "🎬", mov: "🎬",
+    zip: "📦", rar: "📦", "7z": "📦", tar: "📦",
+    xls: "📊", xlsx: "📊", csv: "📊"
+  };
+  return icons[ext] || "📄";
+};
+
+const formatSize = (bytes) => {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+};
+
+async function loadStorage() {
+  const storageList = document.querySelector("#storage-list");
+  try {
+    const response = await fetch(`/api/storage?path=${encodeURIComponent(currentPath)}`);
+    if (!response.ok) throw new Error("Falha ao carregar armazenamento");
+    const data = await response.json();
+    document.querySelector("#storage-count").textContent = data.summary.total_files;
+    document.querySelector("#storage-size").textContent = formatSize(parseInt(data.summary.total_size_bytes));
+
+    if (data.items.length === 0) {
+      storageList.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem 1rem;">Nenhum arquivo nesta pasta</div>';
+      return;
+    }
+
+    storageList.innerHTML = data.items
+      .sort((a, b) => (b.type === "directory") - (a.type === "directory"))
+      .map((item) => {
+        const icon = getFileIcon(item.name, item.type);
+        const size = item.type === "directory" ? "" : formatSize(parseInt(item.size));
+        const isDir = item.type === "directory";
+        return `
+      <div class="storage-item" onclick="${isDir ? `navigateToPath('${item.path}')` : 'void(0)'}">
+        <div class="item-icon">${icon}</div>
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-meta">${size}</div>
+        </div>
+        <div class="item-actions" onclick="event.stopPropagation()">
+          ${isDir ? '' : `<button class="btn-icon" onclick="downloadFile('${item.path}')" title="Baixar">⬇️</button>`}
+          <button class="btn-icon btn-danger-icon" onclick="deleteFile('${item.path}')" title="Excluir">🗑️</button>
+        </div>
+      </div>
+    `;
+      })
+      .join("");
+  } catch (error) {
+    console.error(error);
+    storageList.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: red; padding: 3rem 1rem;">Erro ao carregar armazenamento</div>';
+  }
+}
+
+function updateBreadcrumb() {
+  const parts = currentPath.split("/").filter(p => p);
+  let breadcrumb = '<a href="#" onclick="navigateToPath(\\\'/'+ '\\\')">' + '📁 Raiz</a>';
+  
+  let path = "";
+  for (let i = 0; i < parts.length; i++) {
+    path += "/" + parts[i];
+    breadcrumb += ` / <a href="#" onclick="navigateToPath('${path}')">${parts[i]}</a>`;
+  }
+  document.querySelector("#breadcrumb").innerHTML = breadcrumb;
+}
+
+function navigateToPath(path) {
+  currentPath = path;
+  updateBreadcrumb();
+  loadStorage();
+}
+
+async function downloadFile(path) {
+  window.location.href = `/api/storage/download?path=${encodeURIComponent(path)}`;
+}
+
+async function deleteFile(path) {
+  if (!confirm(`Tem certeza que deseja excluir "${path.split("/").pop()}"?`)) return;
+  const formData = new FormData();
+  formData.append("path", path);
+  try {
+    const response = await fetch("/api/storage/delete", { method: "POST", body: formData });
+    if (!response.ok) throw new Error("Falha ao deletar");
+    await loadStorage();
+  } catch (error) {
+    console.error(error);
+    alert("Erro ao deletar arquivo");
+  }
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.querySelector("#upload-area").classList.add("drag-over");
+}
+
+function handleDragLeave(e) {
+  document.querySelector("#upload-area").classList.remove("drag-over");
+}
+
+async function handleDrop(e) {
+  e.preventDefault();
+  document.querySelector("#upload-area").classList.remove("drag-over");
+  
+  const files = e.dataTransfer.files;
+  for (let file of files) {
+    await uploadFile(file);
+  }
+}
+
+async function uploadFile(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (currentPath !== "/") {
+    formData.append("path", currentPath);
+  }
+  try {
+    const response = await fetch("/api/storage/upload", { method: "POST", body: formData });
+    if (!response.ok) throw new Error("Falha ao enviar");
+    await loadStorage();
+  } catch (error) {
+    console.error(error);
+    alert("Erro ao enviar arquivo: " + error.message);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const fileInput = document.querySelector("#file");
+  fileInput.addEventListener("change", async (e) => {
+    for (let file of e.target.files) {
+      await uploadFile(file);
+    }
+    e.target.value = "";
+  });
+  
+  document.querySelector(".upload-link").addEventListener("click", () => fileInput.click());
+  await loadStorage();
+});
+</script>
+{% endblock %}

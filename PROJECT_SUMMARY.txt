@@ -1,0 +1,355 @@
+================================================================================
+PROJETO: CasaPy - Servidor Caseiro similar a CasaOS
+================================================================================
+DATA CRIAÇÃO: Junho 2026
+ÚLTIMA ATUALIZAÇÃO: 8 de Junho de 2026
+STATUS: ✅ Pronto para Deploy em Termux (Redmi10C)
+
+================================================================================
+RESUMO DO PROJETO
+================================================================================
+CasaPy é um servidor Python hospedado em Termux (Redmi10C) que funciona como:
+- Interface de gestão de armazenamento remoto (estilo Google Drive)
+- Visualizador de informações do sistema (bateria, rede, uptime)
+- Sistema de autenticação com usuários isolados
+- UI responsiva para desktop/tablet/mobile
+
+================================================================================
+STACK TÉCNICO
+================================================================================
+Framework:      FastAPI 0.136.3 com Uvicorn 0.49.0
+Linguagem:      Python 3.14.4
+Banco Dados:    SQLite (app/data/users.db)
+Templating:     Jinja2 3.1.6
+Frontend:       HTML5 + CSS3 + Vanilla JavaScript
+Networking:     IPv4/IPv6 Dual-stack (host="::")
+Autenticação:   HTTP cookies + SHA256 password hashing
+Testing:        pytest 9.0.3
+
+================================================================================
+ESTRUTURA DO PROJETO
+================================================================================
+app/
+├── __init__.py              # Inicialização FastAPI
+├── main.py                  # Entry point do servidor
+├── server.py                # Configuração Uvicorn
+├── config.py                # Variáveis de configuração
+├── db.py                    # SQLite database operations
+├── auth.py                  # Autenticação utilities
+├── models/
+│   ├── user.py             # Model User + hash/verify password
+│   └── device.py           # Device info models
+├── routes/
+│   ├── auth/
+│   │   └── __init__.py     # Login, register, logout endpoints
+│   ├── home.py             # GET / landing page
+│   ├── info.py             # GET /info system info page
+│   ├── storage.py          # GET /storage file manager page
+│   └── api/
+│       └── __init__.py     # REST API endpoints (protected)
+├── services/
+│   ├── system.py           # get_system_info(), get_uptime()
+│   ├── device.py           # get_device_info(), battery, network
+│   └── storage.py          # User-isolated file operations
+├── templates/
+│   ├── layout.html         # Base template
+│   ├── login.html          # Login page
+│   ├── register.html       # Register page
+│   ├── home.html           # Landing page
+│   ├── info.html           # System info page
+│   └── storage.html        # File manager page
+└── static/
+    ├── css/
+    │   ├── style.css       # Main responsive stylesheet
+    │   └── auth.css        # Auth page styles
+    └── js/
+        └── app.js          # Utility functions
+
+tests/
+└── test_server.py          # 4 automated tests (all passing)
+
+requirements.txt            # Python dependencies
+README.md                   # Documentation
+
+================================================================================
+FUNCIONALIDADES IMPLEMENTADAS
+================================================================================
+
+1. AUTENTICAÇÃO E USUÁRIOS ✅
+   - Sistema de login/register com validação
+   - Senha mínimo 6 caracteres, usuário mínimo 3
+   - Cookies httponly para session management
+   - Armazenamento isolado por user_id
+
+2. ARMAZENAMENTO (Google Drive Style) ✅
+   - Upload de múltiplos arquivos com drag-and-drop
+   - Visualização em grid de ícones (16+ tipos de arquivo)
+   - Navegação entre pastas com breadcrumb
+   - Download e exclusão de arquivos
+   - Cálculo automático de tamanho total
+
+3. INFORMAÇÕES DO SISTEMA ✅
+   - Status do servidor (host, OS, Python version)
+   - Tempo ativo (uptime)
+   - Bateria (status e nível percentual)
+   - Interfaces de rede (IPv4 e IPv6)
+
+4. INTERFACE RESPONSIVA ✅
+   - Design mobile-first com CSS variables
+   - Breakpoints: 768px (tablet), 480px (mobile)
+   - Dark theme com tema azul (--accent: #38bdf8)
+   - Cards com animações e hover effects
+
+5. API PROTEGIDA ✅
+   - 8 endpoints REST all requiring authentication
+   - GET /api/status - System info
+   - GET /api/device - Device info
+   - GET /api/storage - List user files
+   - POST /api/storage/upload - Upload file
+   - GET /api/storage/download - Download file
+   - POST /api/storage/delete - Delete file
+   - POST /api/device/action - Device control (reboot)
+
+6. SUPORTE IPv4/IPv6 ✅
+   - Host dual-stack configurado como "::"
+   - Funciona em ambos protocolos simultaneamente
+
+7. TESTES AUTOMATIZADOS ✅
+   - test_login_page: Verifica carregamento página login
+   - test_register_page: Verifica carregamento página register
+   - test_home_redirect_to_login: Valida proteção rota home
+   - test_api_status_requires_auth: Valida proteção API
+   Status: 4/4 PASSING (2.34s)
+
+================================================================================
+ARQUIVOS CRÍTICOS E SUAS RESPONSABILIDADES
+================================================================================
+
+app/db.py
+- Gerencia conexão SQLite
+- Funções: init_db(), get_user_by_username(), create_user(), verify_user()
+- Schema: users table (id, username, password_hash, created_at)
+- CRÍTICO PARA: Autenticação
+
+app/auth.py
+- get_authenticated_user(request) - Extrai e valida cookie de sessão
+- Retorna dict com id e username ou levanta HTTPException 401
+- CRÍTICO PARA: Proteção de rotas
+
+app/models/user.py
+- hash_password(password) - SHA256 hashing
+- verify_password(password, hash) - Validação
+- Pydantic models: LoginRequest, RegisterRequest
+- CRÍTICO PARA: Segurança
+
+app/services/storage.py
+- get_user_storage_dir(user_id) - Pasta isolada por usuário
+- resolve_storage_path(user_id, relative_path) - Proteção path traversal
+- save_upload_file(user_id, path, file) - Upload
+- list_storage_files(user_id, path) - Listagem
+- storage_summary(user_id) - Estatísticas
+- CRÍTICO PARA: Isolamento de dados
+
+app/routes/api/__init__.py
+- Todos endpoints passam user_id para storage operations
+- Sempre valida autenticação antes de processar
+- CRÍTICO PARA: API Security
+
+================================================================================
+COMO EXECUTAR
+================================================================================
+
+1. AMBIENTE LOCAL (Windows/Linux/Mac):
+   python -m venv .venv
+   .venv\Scripts\activate  (Windows) ou source .venv/bin/activate (Unix)
+   pip install -r requirements.txt
+   python -m app.main
+
+2. TERMUX (Redmi10C):
+   pkg install python
+   git clone <repo-url> ~/CasaPy
+   cd ~/CasaPy
+   python -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   python -m app.main
+
+3. ACESSAR:
+   Local: http://localhost:8000
+   IPv4: http://<ip-redmi>:8000
+   IPv6: http://[::1]:8000 (local) ou http://[<ipv6-global>]:8000
+
+4. TESTAR:
+   python -m pytest tests/ -v
+
+================================================================================
+INFORMAÇÕES DE LOGIN PADRÃO
+================================================================================
+Nenhuma conta padrão configurada. Novo usuário deve fazer register em /register
+
+Requisitos validação:
+- Username: mínimo 3 caracteres
+- Password: mínimo 6 caracteres
+- Verifica duplicação de username
+
+================================================================================
+ISSUES RESOLVIDOS ANTERIORMENTE
+================================================================================
+
+1. IMPORT PATH ERRORS
+   Problema: Rotas usavam 3 níveis ".." em vez de 2
+   Solução: Corrigido em home.py, info.py, storage.py, auth/__init__.py
+   Lição: Verificar nesting depth ao usar relative imports
+
+2. JINJA2 TEMPLATE RENDERING
+   Problema: TypeError com caching de templates
+   Solução: Switched from Starlette's Jinja2Templates para direct Environment
+   Lição: Direct Jinja2 Environment é mais simples que wrappers
+
+3. DEPRECATED DATETIME
+   Problema: DeprecationWarning com datetime.utcnow() em Python 3.14
+   Solução: Changed to datetime.now(timezone.utc).isoformat()
+   Lição: Always use UTC-aware datetime
+
+4. USER ISOLATION IN STORAGE
+   Problema: Old storage.py não tinha isolamento de usuário
+   Solução: Rewritten com user_id threading through todas operações
+   Lição: User isolation deve ser mandatory desde design inicial
+
+5. INTERFACE STORAGE
+   Problema: Interface anterior era confusa (tabela básica)
+   Solução: Redesigned para Google Drive style com grid de cards
+   Lição: Ícones e navegação visual melhoram UX significativamente
+
+================================================================================
+PRÓXIMAS MELHORIAS SUGERIDAS
+================================================================================
+
+FASE 3 - DAEMON & MONITORING:
+[ ] Implementar service/daemon management (lista, start, stop, restart)
+[ ] Adicionar graphs de CPU/Memory/Network (Chart.js ou similar)
+[ ] Real-time monitoring com WebSocket ou polling
+
+FASE 4 - SEGURANÇA:
+[ ] 2FA implementation (TOTP)
+[ ] Rate limiting em endpoints de auth
+[ ] Logs de acesso/atividades
+[ ] HTTPS com self-signed certificate
+
+FASE 5 - AVANÇADO:
+[ ] Plugin system para adicionar funcionalidades
+[ ] Backup automático de configurações
+[ ] Theme customization
+[ ] API documentation (Swagger/OpenAPI)
+
+================================================================================
+DEBUGGING TIPS
+================================================================================
+
+1. VERIFICAR LOGS:
+   Console output mostra erros em tempo real
+   Check stdout/stderr no terminal do Termux
+
+2. DATABASE ISSUES:
+   app/data/users.db é SQLite (use sqlite3 CLI para inspecionar)
+   init_db() cria automaticamente na primeira execução
+
+3. PERMISSION ERRORS:
+   Storage path: app/storage/user_<id>/
+   Certifique que pasta tem permissões corretas no Termux
+
+4. NETWORK ISSUES:
+   IPv6 requer configuração do router em alguns casos
+   IPv4 é mais confiável para testes iniciais
+   Check firewall se conexão recusada de outro device
+
+5. PERFORMANCE:
+   Large file uploads podem ser lentos em conexão Termux
+   Considerar chunked upload para arquivos > 100MB
+
+================================================================================
+INSTRUÇÕES PARA IA CONTINUADORA
+================================================================================
+
+⚠️  LEIA ISTO ANTES DE FAZER QUALQUER ALTERAÇÃO:
+
+1. SEMPRE manter separação entre:
+   - Database operations (db.py)
+   - Business logic (services/)
+   - API endpoints (routes/)
+   - Templates (templates/)
+   - Styles (static/css/)
+
+2. QUANDO ADICIONAR NOVA FUNCIONALIDADE:
+   [ ] Criar teste ANTES de implementar (TDD approach)
+   [ ] Adicionar type hints em todas funções
+   [ ] Documentar em docstring (formato: """Description"""")
+   [ ] Certificar user isolation se envolve storage/dados privados
+   [ ] Testar em ambos IPv4 e IPv6
+   [ ] Atualizar este arquivo com resumo da mudança
+
+3. TEMPLATE UPDATES:
+   [ ] Sempre estender layout.html
+   [ ] Usar CSS classes existentes em style.css
+   [ ] Testar responsividade em 3 breakpoints (480px, 768px, full)
+   [ ] Adicionar emojis nos títulos para melhor UX
+
+4. API UPDATES:
+   [ ] SEMPRE validar autenticação antes de processar
+   [ ] SEMPRE validar paths de storage (usar resolve_storage_path)
+   [ ] SEMPRE retornar status codes corretos (200, 401, 404, 500)
+   [ ] SEMPRE log de errors no console
+
+5. SEGURANÇA:
+   [ ] NEVER armazenar senhas em plain text
+   [ ] NEVER confiar em input do usuário sem validação
+   [ ] NEVER permitir path traversal em storage operations
+   [ ] ALWAYS usar try/except em I/O operations
+
+================================================================================
+REGISTRAR MUDANÇAS ABAIXO
+================================================================================
+
+[DATA] - [QUEM/IA] - [ALTERAÇÃO BREVE]
+Exemplo:
+8/6/2026 - GitHub Copilot - Redesigned storage UI com Google Drive style
+8/6/2026 - GitHub Copilot - Removed duplicate info from info.html
+8/6/2026 - GitHub Copilot - Created PROJECT_SUMMARY.txt
+
+---
+
+ADICIONE AQUI:
+
+8/6/2026 - GitHub Copilot - Redesigned storage interface com Google Drive style:
+  • Mudado de tabela para grid de cards com ícones por tipo de arquivo
+  • Adicionado drag-and-drop para upload
+  • Breadcrumb navigation para navegar entre pastas
+  • Formatação automática de tamanho de arquivo (B, KB, MB, GB)
+  • Ícones específicos para 20+ tipos de arquivo (PDF, DOC, IMG, MP4, ZIP, etc)
+  • CSS novo em style.css: .storage-header-new, .storage-grid, .storage-item, .upload-area
+  
+8/6/2026 - GitHub Copilot - Cleaned info.html removing duplicated information:
+  • Merged "Status do sistema" e "Controle do aparelho" cards (duplicados)
+  • Separated "Bateria" em card próprio
+  • Adicionado emojis nos títulos para melhor identificação visual
+  • Reorganizado layout com informações únnicas em cada card
+  • Info consolidada: Host, OS, Python, Uptime em "Status do sistema"
+  • Battery info agora separada e mais destaque
+  
+8/6/2026 - GitHub Copilot - Created PROJECT_SUMMARY.txt:
+  • Comprehensive project documentation
+  • Complete technical stack overview
+  • File structure with responsibilities
+  • Implementation checklist for new IAs
+  • Security guidelines and best practices
+  • Debugging tips and troubleshooting
+  • Project history and issues resolved
+  • Instructions for continuing development
+  
+Tests: ✅ 4/4 PASSING (2.06s)
+  • test_login_page PASSED
+  • test_register_page PASSED
+  • test_home_redirect_to_login PASSED
+  • test_api_status_requires_auth PASSED
+
+

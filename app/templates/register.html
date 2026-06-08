@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro - CasaPy</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/auth.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <div class="auth-card">
+      <h1>CasaPy</h1>
+      <p class="auth-subtitle">Criar nova conta</p>
+
+      <form method="post" class="auth-form">
+        <div class="form-group">
+          <label for="username">Usuário</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            required
+            minlength="3"
+            placeholder="seu_usuario"
+          />
+          <small>Mínimo 3 caracteres</small>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            minlength="6"
+            placeholder="••••••"
+          />
+          <small>Mínimo 6 caracteres</small>
+        </div>
+
+        <div class="form-group">
+          <label for="password_confirm">Confirmar Senha</label>
+          <input
+            type="password"
+            id="password_confirm"
+            name="password_confirm"
+            required
+            minlength="6"
+            placeholder="••••••"
+          />
+        </div>
+
+        <button type="submit" class="btn-primary">Criar Conta</button>
+      </form>
+
+      <div class="auth-footer">
+        <p>Já tem conta? <a href="/login">Faça login aqui</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

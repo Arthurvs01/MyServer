@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CasaPy{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-brand">
+          <h1>CasaPy</h1>
+        </div>
+        <nav class="header-nav">
+          {% if username %}
+            <span class="user-info">{{ username }}</span>
+            <a href="/">Home</a>
+            <a href="/info">Informações</a>
+            <a href="/storage">Armazenamento</a>
+            <a href="/logout" class="logout-link">Sair</a>
+          {% endif %}
+        </nav>
+      </div>
+    </header>
+
+    <main class="app-main">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="app-footer">
+      <span>CasaPy • Servidor Python para Android / Termux</span>
+    </footer>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
