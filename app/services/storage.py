@@ -1,4 +1,7 @@
+import shutil
+import tempfile
 from pathlib import Path
+from datetime import datetime, timezone
 from typing import Dict, List
 
 from fastapi import UploadFile
@@ -15,11 +18,18 @@ def get_user_storage_dir(user_id: int) -> Path:
 
 
 def resolve_storage_path(user_id: int, relative_path: str = "") -> Path:
-    user_dir = get_user_storage_dir(user_id)
+    user_dir = get_user_storage_dir(user_id).resolve()
     if not relative_path:
         return user_dir
-    target = (user_dir / relative_path).resolve()
-    if user_dir not in target.parents and target != user_dir:
+    
+    # Remove barras iniciais para evitar que o join seja tratado como caminho absoluto
+    clean_path = relative_path.lstrip("/\\")
+    target = (user_dir / clean_path).resolve()
+    
+    # Verificação robusta de subcaminho para evitar erros em Windows/Termux
+    try:
+        target.relative_to(user_dir)
+    except ValueError:
         raise ValueError("Caminho fora da pasta de armazenamento do usuário")
     return target
 
@@ -29,16 +39,22 @@ def list_storage_files(user_id: int, relative_path: str = "") -> List[Dict[str, 
     items: List[Dict[str, str]] = []
     if not root.exists():
         return items
+        
+    user_root = get_user_storage_dir(user_id)
+    
     for entry in sorted(root.iterdir(), key=lambda item: item.name.lower()):
         item_type = "directory" if entry.is_dir() else "file"
+        stat = entry.stat()
         items.append(
             {
                 "name": entry.name,
-                "path": str(entry.relative_to(get_user_storage_dir(user_id))).replace(
+                "path": str(entry.relative_to(user_root)).replace(
                     "\\", "/"
                 ),
                 "type": item_type,
-                "size": str(entry.stat().st_size) if entry.is_file() else "0",
+                "size": str(stat.st_size) if entry.is_file() else "0",
+                "modified": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+                "extension": entry.suffix.lower() if entry.is_file() else ""
             }
         )
     return items
@@ -65,19 +81,46 @@ def get_user_storage_summary(user_id: int) -> Dict[str, str]:
 
 
 def save_upload_file(user_id: int, relative_path: str, upload_file: UploadFile) -> Path:
+    # Validação do nome do arquivo para satisfazer o Pylance e evitar erros de I/O
+    if not upload_file.filename:
+        raise ValueError("O arquivo enviado não possui um nome válido")
+    filename = upload_file.filename
+
     if relative_path:
         target_folder = resolve_storage_path(user_id, relative_path)
         if target_folder.exists() and target_folder.is_file():
             raise ValueError("O caminho de upload não pode ser um arquivo existente")
         target_folder.mkdir(parents=True, exist_ok=True)
-        target = target_folder / upload_file.filename
+        target = target_folder / filename
     else:
         user_dir = get_user_storage_dir(user_id)
-        target = user_dir / upload_file.filename
+        target = user_dir / filename
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("wb") as buffer:
         buffer.write(upload_file.file.read())
     return target
+
+
+def create_storage_directory(user_id: int, relative_path: str, folder_name: str) -> Path:
+    base_path = resolve_storage_path(user_id, relative_path)
+    new_dir = base_path / folder_name
+    new_dir.mkdir(exist_ok=True)
+    return new_dir
+
+
+def zip_storage_folder(user_id: int, relative_path: str) -> Path:
+    folder_to_zip = resolve_storage_path(user_id, relative_path)
+    if not folder_to_zip.is_dir():
+        raise ValueError("O caminho especificado não é uma pasta")
+    
+    temp_dir = Path(tempfile.gettempdir()) / "casapy_zips"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    
+    zip_name = f"{folder_to_zip.name}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+    zip_base_path = temp_dir / zip_name
+    
+    archive_path = shutil.make_archive(str(zip_base_path), 'zip', folder_to_zip)
+    return Path(archive_path)
 
 
 def delete_storage_path(user_id: int, relative_path: str) -> None:
