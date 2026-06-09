@@ -1,36 +1,22 @@
-from pathlib import Path
-
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
-from jinja2 import Environment, FileSystemLoader, select_autoescape
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-templates = Environment(
-    loader=FileSystemLoader(BASE_DIR / "templates"),
-    autoescape=select_autoescape(["html", "xml"]),
-)
-
+from flask import Blueprint, render_template, redirect, url_for
 from ..auth import get_authenticated_user
 from ..services.device import get_device_info
 from ..services.system import get_system_info
 
-router = APIRouter()
+router = Blueprint('info', __name__)
 
 
-@router.get("/info")
-async def info(request: Request):
+@router.route("/info")
+def info():
     try:
-        user = get_authenticated_user(request)
+        user = get_authenticated_user()
         status = get_system_info()
         device = get_device_info()
-        template = templates.get_template("info.html")
-        return HTMLResponse(
-            template.render(
-                request=request,
-                username=user["username"],
-                status=status,
-                device=device,
-            )
+        return render_template(
+            "info.html",
+            username=user["username"],
+            status=status,
+            device=device,
         )
     except Exception:
-        return RedirectResponse(url="/login", status_code=302)
+        return redirect(url_for('auth.login_page'))

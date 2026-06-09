@@ -1,17 +1,12 @@
-from fastapi import Request, HTTPException, status
+from flask import request, abort
 
-
-def get_authenticated_user(request: Request) -> dict:
+def get_authenticated_user() -> dict:
     user_id = request.cookies.get("user_id")
     username = request.cookies.get("username")
     if not user_id or not username:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Não autenticado",
-            headers={"Location": "/login"},
-        )
-    return {"id": int(user_id), "username": username}
+        abort(401, description="Não autenticado")
+    return {"id": int(user_id or 0), "username": str(username or "")}
 
 
-def require_auth(request: Request) -> dict:
-    return get_authenticated_user(request)
+def require_auth() -> dict:
+    return get_authenticated_user()

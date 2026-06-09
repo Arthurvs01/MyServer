@@ -1,13 +1,15 @@
 import hashlib
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class LoginRequest(BaseModel):
+@dataclass
+class LoginRequest:
     username: str
     password: str
 
 
-class RegisterRequest(BaseModel):
+@dataclass
+class RegisterRequest:
     username: str
     password: str
     password_confirm: str

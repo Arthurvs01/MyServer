@@ -55,7 +55,7 @@ def create_user(username: str, password_hash: str) -> int:
     conn.commit()
     user_id = cursor.lastrowid
     conn.close()
-    return user_id
+    return int(user_id or 0)
 
 
 def verify_user(username: str, password_hash: str) -> Optional[dict]:

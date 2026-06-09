@@ -9,6 +9,8 @@
   --danger: #ef4444;
   --border: rgba(148, 163, 184, 0.16);
   --spacing: 1rem;
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 72px;
   --radius: 14px;
   --radius-lg: 24px;
 }
@@ -33,8 +35,9 @@ body {
 
 .app-container {
   display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+  flex-direction: column; /* Alterado para header/footer fixos e main flexível */
+  height: 100vh;
+  overflow: hidden;
 }
 
 .app-header {
@@ -93,11 +96,12 @@ body {
 }
 
 .app-main {
-  flex: 1;
-  padding: 2rem 1rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
+  flex: 1; /* Ocupa o espaço restante */
+  display: flex; /* Para conter a sidebar e o conteúdo principal */
+  flex-direction: row; /* Sidebar e conteúdo lado a lado */
+  background: var(--bg);
+  position: relative; /* Para posicionamento de elementos internos */
+  overflow-y: auto;
 }
 
 .app-footer {
@@ -266,68 +270,181 @@ body {
   color: var(--accent);
 }
 
-/* Storage Section */
-.storage-section {
-  width: 100%;
-}
-
-/* New Storage Header */
-.storage-header-new {
+/* --- Google Drive UI Styles --- */
+.drive-layout {
+  flex: 1; /* Ocupa todo o espaço disponível dentro de .app-main */
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 2rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
+  width: 100%; /* Garante que o layout preencha a largura */
 }
 
-.storage-header-new h2 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
-
-.breadcrumb {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.breadcrumb a {
-  color: var(--accent);
-  text-decoration: none;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.breadcrumb a:hover {
-  color: var(--accent-dark);
-  text-decoration: underline;
-}
-
-.storage-stats-new {
-  display: flex;
-  gap: 2rem;
-}
-
-.stat-item-new {
+.drive-sidebar {
+  width: var(--sidebar-width);
+  border-right: 1px solid var(--border);
+  padding: 1rem;
   display: flex;
   flex-direction: column;
+  gap: 2rem;
+  background: rgba(15, 23, 42, 0.3);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.drive-sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+  padding: 1rem 0.5rem;
   align-items: center;
-  gap: 0.5rem;
-  text-align: center;
 }
 
-.stat-item-new .stat-value {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.stat-item-new .stat-label {
-  font-size: 0.85rem;
+.sidebar-toggle {
+  background: transparent;
+  border: none;
   color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  transition: background 0.2s;
+}
+
+.sidebar-toggle:hover {
+  background: var(--surface-soft);
+}
+
+.btn-new {
+  background: #ffffff;
+  color: #1f1f1f;
+  border: none;
+  padding: 1rem 1.5rem;
+  border-radius: 16px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  max-width: 120px;
+  justify-content: center;
+}
+
+.drive-sidebar.collapsed .btn-new {
+  width: 48px;
+  padding: 0.75rem;
+  border-radius: 12px;
+}
+
+.drive-sidebar.collapsed .btn-new span {
+  display: none;
+}
+
+.btn-new:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  background: #f1f3f4;
+}
+
+.side-nav {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.side-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.75rem 1rem;
+  border-radius: 100px 0 0 100px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.drive-sidebar.collapsed .side-nav-item {
+  width: 48px;
+  height: 48px;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.drive-sidebar.collapsed .side-nav-item span:last-child {
+  display: none;
+}
+
+.side-nav-item.active {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.side-nav-item:hover:not(.active) {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.drive-main {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+}
+
+.drive-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.drive-search-bar {
+  background: var(--surface-soft);
+  border-radius: 24px;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 720px;
+}
+
+.drive-search-bar input {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  width: 100%;
+  outline: none;
+}
+
+/* Floating Menu for "Novo" */
+.dropdown-menu {
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+  padding: 0.5rem 0;
+  z-index: 1000;
+  min-width: 200px;
+  display: none;
+}
+
+.dropdown-item {
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: var(--surface-soft);
 }
 
 /* Upload Area */
@@ -461,7 +578,7 @@ body {
   color: var(--danger);
 }
 
-/* Old Storage Styles (Fallback) */
+/* Old Storage Styles (to be removed if not used elsewhere) */
 .storage-header {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -721,6 +838,10 @@ body {
   }
 }
 
+/* Specific for storage page breadcrumb */
+.drive-main .breadcrumb {
+  margin-left: 1rem; /* Keep original margin for breadcrumb in drive-toolbar */
+}
 @media (max-width: 480px) {
   :root {
     --spacing: 0.75rem;

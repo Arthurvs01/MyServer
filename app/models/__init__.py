@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class SystemStatus(BaseModel):
+@dataclass
+class SystemStatus:
     host: str
     os: str
     release: str

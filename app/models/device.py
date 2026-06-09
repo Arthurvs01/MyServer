@@ -1,11 +1,13 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class DeviceActionRequest(BaseModel):
+@dataclass
+class DeviceActionRequest:
     action: str
 
 
-class DeviceInfo(BaseModel):
+@dataclass
+class DeviceInfo:
     host: str
     os: str
     release: str

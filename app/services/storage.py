@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, List
 
-from fastapi import UploadFile
+from werkzeug.datastructures import FileStorage
 
 from ..config import STORAGE_DIR
 
@@ -80,7 +80,7 @@ def get_user_storage_summary(user_id: int) -> Dict[str, str]:
     return storage_summary(user_id)
 
 
-def save_upload_file(user_id: int, relative_path: str, upload_file: UploadFile) -> Path:
+def save_upload_file(user_id: int, relative_path: str, upload_file: FileStorage) -> Path:
     # Validação do nome do arquivo para satisfazer o Pylance e evitar erros de I/O
     if not upload_file.filename:
         raise ValueError("O arquivo enviado não possui um nome válido")
@@ -96,8 +96,7 @@ def save_upload_file(user_id: int, relative_path: str, upload_file: UploadFile) 
         user_dir = get_user_storage_dir(user_id)
         target = user_dir / filename
     target.parent.mkdir(parents=True, exist_ok=True)
-    with target.open("wb") as buffer:
-        buffer.write(upload_file.file.read())
+    upload_file.save(str(target))
     return target
 
 
@@ -106,6 +105,62 @@ def create_storage_directory(user_id: int, relative_path: str, folder_name: str)
     new_dir = base_path / folder_name
     new_dir.mkdir(exist_ok=True)
     return new_dir
+
+
+def move_storage_path(user_id: int, source_path: str, dest_path: str) -> Path:
+    source = resolve_storage_path(user_id, source_path)
+    dest_dir = resolve_storage_path(user_id, dest_path)
+    if not source.exists():
+        raise FileNotFoundError("Item de origem não encontrado")
+    
+    target = dest_dir / source.name
+    return Path(shutil.move(str(source), str(target)))
+
+
+def copy_storage_path(user_id: int, source_path: str, dest_path: str) -> Path:
+    source = resolve_storage_path(user_id, source_path)
+    dest_dir = resolve_storage_path(user_id, dest_path)
+    target = dest_dir / source.name
+    
+    if source.is_dir():
+        return Path(shutil.copytree(str(source), str(target), dirs_exist_ok=True))
+    return Path(shutil.copy2(str(source), str(target)))
+
+
+def rename_storage_path(user_id: int, relative_path: str, new_name: str) -> Path:
+    target = resolve_storage_path(user_id, relative_path)
+    if not target.exists():
+        raise FileNotFoundError("Item não encontrado")
+    
+    new_path = target.parent / new_name
+    # Validação de segurança para o novo nome
+    if any(c in new_name for c in r'<>:"/\|?*'):
+        raise ValueError("Nome de arquivo contém caracteres inválidos")
+        
+    if new_path.exists():
+        raise ValueError("Um item com este nome já existe")
+        
+    return Path(shutil.move(str(target), str(new_path)))
+
+
+def search_storage(user_id: int, query: str) -> List[Dict[str, str]]:
+    user_root = get_user_storage_dir(user_id)
+    query = query.lower()
+    all_items = list_storage_files(user_id, "") # Pega tudo na raiz (simples)
+    # Ou busca recursiva real:
+    results = []
+    for entry in user_root.rglob("*"):
+        if query in entry.name.lower():
+            stat = entry.stat()
+            results.append({
+                "name": entry.name,
+                "path": str(entry.relative_to(user_root)).replace("\\", "/"),
+                "type": "directory" if entry.is_dir() else "file",
+                "size": str(stat.st_size) if entry.is_file() else "0",
+                "modified": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+                "extension": entry.suffix.lower() if entry.is_file() else ""
+            })
+    return results
 
 
 def zip_storage_folder(user_id: int, relative_path: str) -> Path:

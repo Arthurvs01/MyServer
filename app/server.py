@@ -1,32 +1,28 @@
 from pathlib import Path
-
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-
+from flask import Flask
 from .config import APP_NAME, STORAGE_DIR
 from .db import init_db
 from .routes.auth import router as auth_router
 from .routes.home import router as home_router
 from .routes.info import router as info_router
 from .routes.storage import router as storage_page_router
-from .routes.api import router as api_router
+from .routes.api import api_bp
 
 BASE_DIR = Path(__file__).resolve().parent
 
-
-def create_app() -> FastAPI:
+def create_app() -> Flask:
     init_db()
-    app = FastAPI(title=APP_NAME)
-    app.mount(
-        "/static",
-        StaticFiles(directory=BASE_DIR / "static"),
-        name="static",
-    )
-    app.include_router(auth_router)
-    app.include_router(home_router)
-    app.include_router(info_router)
-    app.include_router(storage_page_router)
-    app.include_router(api_router, prefix="/api")
+    app = Flask(__name__, 
+                static_folder=str(BASE_DIR / "static"), 
+                template_folder=str(BASE_DIR / "templates"),
+                static_url_path='/static')
+    
+    app.register_blueprint(auth_router)
+    app.register_blueprint(home_router)
+    app.register_blueprint(info_router)
+    app.register_blueprint(storage_page_router)
+    app.register_blueprint(api_bp, url_prefix="/api")
+    
     return app
 
 

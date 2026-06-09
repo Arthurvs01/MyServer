@@ -9,7 +9,7 @@
 </head>
 <body>
   <div class="app-container">
-    <header class="app-header">
+    <header class="app-header" style="flex-shrink: 0;">
       <div class="header-content">
         <div class="header-brand">
           <h1>CasaPy</h1>
@@ -26,11 +26,11 @@
       </div>
     </header>
 
-    <main class="app-main">
+    <main class="app-main" style="flex: 1; display: flex; overflow: hidden;">
       {% block content %}{% endblock %}
     </main>
 
-    <footer class="app-footer">
+    <footer class="app-footer" style="flex-shrink: 0;">
       <span>CasaPy • Servidor Python para Android / Termux</span>
     </footer>
   </div>

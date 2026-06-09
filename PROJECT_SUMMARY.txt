@@ -17,7 +17,7 @@ CasaPy é um servidor Python hospedado em Termux (Redmi10C) que funciona como:
 ================================================================================
 STACK TÉCNICO
 ================================================================================
-Framework:      FastAPI 0.136.3 com Uvicorn 0.49.0
+Framework:      Flask 3.0.3 com Waitress 3.0.0
 Linguagem:      Python 3.14.4
 Banco Dados:    SQLite (app/data/users.db)
 Templating:     Jinja2 3.1.6
@@ -365,3 +365,44 @@ Tests: ✅ 4/4 PASSING (2.06s)
   • Implementado download de pastas via compactação ZIP dinâmica
   • Adicionado BackgroundTasks para limpeza automática de arquivos ZIP temporários
   • Refatorado storage_upload para suportar caminhos recursivos (upload de diretórios)
+
+8/6/2026 - Gemini Code Assist - Finalização do Layout Google Drive:
+  • Implementado endpoint de busca global (/api/storage/search) para barra de pesquisa
+  • Adicionado suporte a renomeação de itens (/api/storage/rename)
+  • Backend preparado para metadados avançados e navegação fluida estilo Drive
+
+8/6/2026 - Gemini Code Assist - Sidebar Recolhível e Menu Novo:
+  • Implementada sidebar retrátil com persistência no localStorage
+  • Substituído prompt do botão "Novo" por menu flutuante funcional
+  • Corrigido upload de pastas e arquivos via menu dropdown
+
+8/6/2026 - Gemini Code Assist - Refatoração do Layout Global:
+  • Ajustado layout.html e style.css para melhor integração do header/footer global com o drive-layout
+  • app-container agora é flex-column, app-main é flex-row para sidebar e conteúdo
+
+8/6/2026 - Gemini Code Assist - Interface Google Drive Finalizada:
+  • Implementada barra de pesquisa dinâmica com debounce no frontend
+  • Adicionados botões e lógica para 'Nova Pasta' e 'Renomear'
+  • Melhoria no Breadcrumb para suportar estado de pesquisa e navegação recursiva
+
+8/6/2026 - Gemini Code Assist - Migração para Flask (Estabilidade Termux):
+  • Substituído FastAPI por Flask para evitar problemas com pydantic-core no ARM
+  • Trocado Uvicorn por Waitress (WSGI de produção para Windows/Android)
+  • Refatorados todos os endpoints de API e lógica de autenticação para Flask
+  • Mantida compatibilidade total com o frontend Google Drive Style
+
+8/6/2026 - Gemini Code Assist - Operações Avançadas de Arquivos:
+  • Implementadas funções de Mover (shutil.move) e Copiar (shutil.copytree/copy2)
+  • Adicionados endpoints de API para movimentação e cópia de itens
+  • Habilitado Upload de Pastas via atributo 'webkitdirectory' no frontend
+  • Interface atualizada com botões de ação para Mover e Copiar itens
+
+8/6/2026 - Gemini Code Assist - Fix de Inicialização e Tipagem:
+  • Corrigida importação de Blueprint no app/routes/__init__.py (router -> api_bp)
+  • Resolvidos avisos do Pylance garantindo valores padrão (string vazia) em inputs de formulário
+  • Migrado dashboard.py de FastAPI para Flask para evitar erros de runtime
+
+8/6/2026 - Gemini Code Assist - Resolução de TemplateNotFound:
+  • Corrigida instanciação do Flask com __name__ e template_folder explícito
+  • Removidos ambientes Jinja2 legados redundantes em dashboard.py
+  • Atualizados testes automatizados para utilizar o Flask Test Client

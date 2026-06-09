@@ -3,46 +3,73 @@
 {% block title %}Armazenamento - CasaPy{% endblock %}
 
 {% block content %}
-<section class="storage-section">
-  <div class="storage-header-new">
-    <div>
-      <h2>Armazenamento remoto</h2>
-      <div class="breadcrumb" id="breadcrumb">
-        <a href="#" onclick="navigateToPath('/')">📁 Raiz</a>
+<div class="drive-layout" style="flex: 1;">
+  <!-- Sidebar Estilo Google Drive -->
+  <aside class="drive-sidebar">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Recolher menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        </button>
+    </div>
+
+    <div style="position: relative;">
+        <button class="btn-new" id="btn-new" onclick="toggleNewMenu(event)">
+          <svg width="24" height="24" viewBox="0 0 24 24"><path fill="#EA4335" d="M11 13H5v-2h6V5h2v6h6v2h-6v6h-2z"/></svg>
+          <span>Novo</span>
+        </button>
+        <div class="dropdown-menu" id="new-menu">
+            <div class="dropdown-item" onclick="createFolder()"><span>📁</span> Nova pasta</div>
+            <div class="dropdown-item" onclick="document.getElementById('file').click()"><span>📄</span> Upload de arquivo</div>
+            <div class="dropdown-item" onclick="document.getElementById('folder-upload').click()"><span>📂</span> Upload de pasta</div>
+        </div>
+    </div>
+    
+    <nav>
+      <ul class="side-nav">
+        <li><a href="#" class="side-nav-item active" onclick="navigateToPath('/')"><span>📂</span> Meu Drive</a></li>
+        <li><a href="#" class="side-nav-item"><span>🕒</span> Recentes</a></li>
+        <li><a href="#" class="side-nav-item"><span>⭐</span> Com estrela</a></li>
+        <li><a href="#" class="side-nav-item"><span>🗑️</span> Lixeira</a></li>
+      </ul>
+    </nav>
+
+    <div style="margin-top: auto; padding: 1rem; border-top: 1px solid var(--border);">
+      <div class="stat-label" style="margin-bottom: 8px;">Armazenamento</div>
+      <div style="height: 4px; background: var(--surface-soft); border-radius: 2px; overflow: hidden;">
+        <div id="storage-bar" style="height: 100%; background: var(--accent); width: 0%;"></div>
+      </div>
+      <div class="stat-label" id="storage-size-text" style="margin-top: 8px; font-size: 0.75rem;">0 B de ilimitado</div>
+    </div>
+  </aside>
+
+  <!-- Conteúdo Principal -->
+  <main class="drive-main">
+    <div class="drive-toolbar">
+      <div class="drive-search-bar">
+        <span>🔍</span>
+        <input type="text" id="search-input" placeholder="Pesquisar no Drive" oninput="handleSearch(this.value)">
+      </div>
+      <div class="breadcrumb" id="breadcrumb"></div>
+    </div>
+
+    <!-- Inputs Escondidos para Upload -->
+    <input type="file" id="file" multiple hidden />
+    <input type="file" id="folder-upload" webkitdirectory directory multiple hidden />
+
+    <div class="storage-list-container-new" id="storage-list-container">
+      <div id="storage-list" class="storage-grid">
+        <!-- Conteúdo dinâmico -->
       </div>
     </div>
-    <div class="storage-stats-new">
-      <div class="stat-item-new">
-        <span class="stat-value" id="storage-count">{{ storage_summary.total_files }}</span>
-        <span class="stat-label">Arquivos</span>
-      </div>
-      <div class="stat-item-new">
-        <span class="stat-value" id="storage-size">{{ storage_summary.total_size_bytes }}</span>
-        <span class="stat-label">Bytes</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="upload-area" id="upload-area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
-    <div class="upload-content">
-      <div class="upload-icon">📤</div>
-      <p>Arraste arquivos aqui ou <label class="upload-link">clique para selecionar</label></p>
-      <input type="file" id="file" name="file" multiple hidden />
-    </div>
-  </div>
-
-  <div class="storage-list-container-new" id="storage-list-container">
-    <div id="storage-list" class="storage-grid">
-      <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem 1rem;">Carregando...</div>
-    </div>
-  </div>
-</section>
-
+  </main>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let currentPath = "/";
+let searchTimeout = null;
+let isSearching = false;
 
 const getFileIcon = (name, type) => {
   if (type === "directory") return "📁";
@@ -68,18 +95,30 @@ const formatSize = (bytes) => {
 async function loadStorage() {
   const storageList = document.querySelector("#storage-list");
   try {
-    const response = await fetch(`/api/storage?path=${encodeURIComponent(currentPath)}`);
+    const url = isSearching 
+      ? `/api/storage/search?q=${encodeURIComponent(document.querySelector("#search-input").value)}`
+      : `/api/storage?path=${encodeURIComponent(currentPath)}`;
+      
+    const response = await fetch(url);
     if (!response.ok) throw new Error("Falha ao carregar armazenamento");
     const data = await response.json();
-    document.querySelector("#storage-count").textContent = data.summary.total_files;
-    document.querySelector("#storage-size").textContent = formatSize(parseInt(data.summary.total_size_bytes));
 
-    if (data.items.length === 0) {
+    // Se for listagem normal, atualiza sumário. Se for busca, data é uma lista simples.
+    const items = isSearching ? data : data.items;
+    
+    if (!isSearching) {
+        const sizeStr = formatSize(parseInt(data.summary.total_size_bytes));
+        document.querySelector("#storage-size-text").textContent = `${sizeStr} usados`;
+        // Simulação de barra de progresso (baseada em 1GB fictício para visual)
+        document.querySelector("#storage-bar").style.width = Math.min((parseInt(data.summary.total_size_bytes) / (1024**3)) * 100, 100) + "%";
+    }
+
+    if (items.length === 0) {
       storageList.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem 1rem;">Nenhum arquivo nesta pasta</div>';
       return;
     }
 
-    storageList.innerHTML = data.items
+    storageList.innerHTML = items
       .sort((a, b) => (b.type === "directory") - (a.type === "directory"))
       .map((item) => {
         const icon = getFileIcon(item.name, item.type);
@@ -90,9 +129,12 @@ async function loadStorage() {
         <div class="item-icon">${icon}</div>
         <div class="item-info">
           <div class="item-name">${item.name}</div>
-          <div class="item-meta">${size}</div>
+          <div class="item-meta">${isSearching ? item.path : size}</div>
         </div>
         <div class="item-actions" onclick="event.stopPropagation()">
+          <button class="btn-icon" onclick="renameItem('${item.path}')" title="Renomear">✏️</button>
+          <button class="btn-icon" onclick="moveItem('${item.path}')" title="Mover">🚚</button>
+          <button class="btn-icon" onclick="copyItem('${item.path}')" title="Copiar">📑</button>
           ${isDir ? '' : `<button class="btn-icon" onclick="downloadFile('${item.path}')" title="Baixar">⬇️</button>`}
           <button class="btn-icon btn-danger-icon" onclick="deleteFile('${item.path}')" title="Excluir">🗑️</button>
         </div>
@@ -106,9 +148,103 @@ async function loadStorage() {
   }
 }
 
+function handleSearch(query) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        isSearching = query.length >= 2;
+        if (!isSearching && query.length === 0) {
+            loadStorage();
+        } else if (isSearching) {
+            loadStorage();
+        }
+    }, 300);
+}
+
+async function createFolder() {
+    const name = prompt("Nome da nova pasta:");
+    if (!name) return;
+    
+    const formData = new FormData();
+    formData.append("path", currentPath);
+    formData.append("name", name);
+    
+    try {
+        const response = await fetch("/api/storage/mkdir", { method: "POST", body: formData });
+        if (!response.ok) throw new Error("Falha ao criar pasta");
+        await loadStorage();
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function renameItem(path) {
+    const oldName = path.split("/").pop();
+    const newName = prompt("Novo nome:", oldName);
+    if (!newName || newName === oldName) return;
+    
+    const formData = new FormData();
+    formData.append("path", path);
+    formData.append("new_name", newName);
+    
+    try {
+        const response = await fetch("/api/storage/rename", { method: "POST", body: formData });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Erro ao renomear");
+        }
+        await loadStorage();
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function moveItem(path) {
+    const dest = prompt("Mover para (caminho relativo, ex: /Documentos):", "/");
+    if (dest === null) return;
+    
+    const formData = new FormData();
+    formData.append("path", path);
+    formData.append("destination", dest);
+    
+    try {
+        const response = await fetch("/api/storage/move", { method: "POST", body: formData });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Erro ao mover");
+        }
+        await loadStorage();
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function copyItem(path) {
+    const dest = prompt("Copiar para (caminho relativo, ex: /Backup):", currentPath);
+    if (dest === null) return;
+    
+    const formData = new FormData();
+    formData.append("path", path);
+    formData.append("destination", dest);
+    
+    try {
+        const response = await fetch("/api/storage/copy", { method: "POST", body: formData });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Erro ao copiar");
+        }
+        await loadStorage();
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
 function updateBreadcrumb() {
+  if (isSearching) {
+      document.querySelector("#breadcrumb").innerHTML = "Resultados da pesquisa";
+      return;
+  }
   const parts = currentPath.split("/").filter(p => p);
-  let breadcrumb = '<a href="#" onclick="navigateToPath(\\\'/'+ '\\\')">' + '📁 Raiz</a>';
+  let breadcrumb = '<a href="#" onclick="navigateToPath(\'/\')">Meu Drive</a>';
   
   let path = "";
   for (let i = 0; i < parts.length; i++) {
@@ -161,12 +297,30 @@ async function handleDrop(e) {
   }
 }
 
-async function uploadFile(file) {
+async function handleFolderSelect(e) {
+  const files = e.target.files;
+  for (let file of files) {
+    await uploadFile(file, file.webkitRelativePath);
+  }
+  e.target.value = "";
+}
+
+async function uploadFile(file, relativePath = "") {
   const formData = new FormData();
   formData.append("file", file);
-  if (currentPath !== "/") {
-    formData.append("path", currentPath);
+  
+  // Se temos um relativePath (de um upload de pasta), usamos ele, 
+  // senão usamos o currentPath da navegação.
+  let targetPath = currentPath;
+  if (relativePath) {
+      const parts = relativePath.split("/");
+      parts.pop(); // Remove o nome do arquivo
+      const folderPath = parts.join("/");
+      targetPath = currentPath === "/" ? folderPath : `${currentPath}/${folderPath}`;
   }
+  
+  formData.append("path", targetPath);
+
   try {
     const response = await fetch("/api/storage/upload", { method: "POST", body: formData });
     if (!response.ok) throw new Error("Falha ao enviar");
@@ -177,16 +331,50 @@ async function uploadFile(file) {
   }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  const fileInput = document.querySelector("#file");
-  fileInput.addEventListener("change", async (e) => {
-    for (let file of e.target.files) {
-      await uploadFile(file);
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+    localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+}
+
+function toggleNewMenu(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('new-menu');
+    const isVisible = menu.style.display === 'block';
+    
+    // Fecha todos os outros menus antes
+    document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+    
+    if (!isVisible) {
+        menu.style.display = 'block';
+        menu.style.top = '100%';
+        menu.style.left = '0';
     }
-    e.target.value = "";
+}
+
+// Fecha menus ao clicar fora
+document.addEventListener('click', () => {
+    document.getElementById('new-menu').style.display = 'none';
+});
+
+document.addEventListener("DOMContentLoaded", async () => {
+  // Recupera estado da sidebar
+  if (localStorage.getItem('sidebar-collapsed') === 'true') {
+      document.getElementById('sidebar').classList.add('collapsed');
+  }
+
+  const fileInput = document.getElementById("file");
+  const folderInput = document.getElementById("folder-upload");
+
+  fileInput.addEventListener("change", async (e) => {
+    for (let file of e.target.files) { await uploadFile(file); }
+    e.target.value = ""; 
   });
-  
-  document.querySelector(".upload-link").addEventListener("click", () => fileInput.click());
+
+  folderInput.addEventListener("change", async (e) => {
+    await handleFolderSelect(e);
+  });
+
   await loadStorage();
 });
 </script>

@@ -1,7 +1,7 @@
 import os
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, BackgroundTasks, status as http_status
-from fastapi.responses import FileResponse
-
+import threading
+from flask import Blueprint, request, jsonify, send_file, abort
+from werkzeug.utils import secure_filename
 from ...auth import get_authenticated_user
 from ...models.device import DeviceActionRequest
 from ...services.device import get_device_info, perform_device_action
@@ -12,103 +12,154 @@ from ...services.storage import (
     list_storage_files,
     save_upload_file,
     create_storage_directory,
+    move_storage_path,
+    copy_storage_path,
+    rename_storage_path,
+    search_storage,
     zip_storage_folder,
     resolve_storage_path,
     storage_summary,
 )
 from ...services.system import get_system_info
 
-router = APIRouter()
+api_bp = Blueprint('api', __name__)
 
 
-@router.get("/status")
-async def status(request: Request):
-    get_authenticated_user(request)
-    return get_system_info()
+@api_bp.route("/status", methods=["GET"])
+def status():
+    get_authenticated_user()
+    return jsonify(get_system_info())
 
 
-@router.get("/device")
-async def device_status(request: Request):
-    get_authenticated_user(request)
-    return get_device_info()
+@api_bp.route("/device", methods=["GET"])
+def device_status():
+    get_authenticated_user()
+    return jsonify(get_device_info())
 
 
-@router.post("/device/action")
-async def device_action(request: Request, req: DeviceActionRequest):
-    get_authenticated_user(request)
+@api_bp.route("/device/action", methods=["POST"])
+def device_action():
+    get_authenticated_user()
+    data = request.get_json()
+    action = data.get("action")
     try:
-        return perform_device_action(req.action)
+        return jsonify(perform_device_action(action))
     except ValueError as exc:
-        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        return jsonify({"detail": str(exc)}), 400
 
 
-@router.get("/storage")
-async def storage_list(request: Request, path: str = ""):
-    user = get_authenticated_user(request)
+@api_bp.route("/storage", methods=["GET"])
+def storage_list():
+    user = get_authenticated_user()
+    path = request.args.get("path", "")
     try:
-        return {
+        return jsonify({
             "summary": storage_summary(user["id"]),
             "items": list_storage_files(user["id"], path),
-        }
+        })
     except ValueError as exc:
-        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        return jsonify({"detail": str(exc)}), 400
 
 
-@router.post("/storage/upload")
-async def storage_upload(
-    request: Request, file: UploadFile = File(...), path: str = Form("")
-):
-    user = get_authenticated_user(request)
+@api_bp.route("/storage/upload", methods=["POST"])
+def storage_upload():
+    user = get_authenticated_user()
+    file = request.files.get("file")
+    path = request.form.get("path", "")
+    if not file:
+        abort(400, description="Nenhum arquivo enviado")
     try:
         target = save_upload_file(user["id"], path, file)
         relative_path = str(
             target.relative_to(get_user_storage_dir(user["id"]))
         ).replace("\\", "/")
-        return {"path": relative_path}
+        return jsonify({"path": relative_path})
     except ValueError as exc:
-        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        return jsonify({"detail": str(exc)}), 400
+
+@api_bp.route("/storage/search", methods=["GET"])
+def storage_search():
+    user = get_authenticated_user()
+    q = request.args.get("q", "")
+    if len(q) < 2:
+        return jsonify([])
+    return jsonify(search_storage(user["id"], q))
 
 
-@router.post("/storage/mkdir")
-async def storage_mkdir(request: Request, path: str = Form(""), name: str = Form(...)):
-    user = get_authenticated_user(request)
+@api_bp.route("/storage/rename", methods=["POST"])
+def storage_rename():
+    user = get_authenticated_user()
+    path = request.form.get("path", "")
+    new_name = request.form.get("new_name", "")
+    try:
+        rename_storage_path(user["id"], path, new_name)
+        return jsonify({"status": "success", "new_name": new_name})
+    except (ValueError, FileNotFoundError) as exc:
+        return jsonify({"detail": str(exc)}), 400
+
+@api_bp.route("/storage/move", methods=["POST"])
+def storage_move():
+    user = get_authenticated_user()
+    path = request.form.get("path", "")
+    destination = request.form.get("destination", "")
+    try:
+        move_storage_path(user["id"], path, destination)
+        return jsonify({"status": "success"})
+    except (ValueError, FileNotFoundError) as exc:
+        return jsonify({"detail": str(exc)}), 400
+
+
+@api_bp.route("/storage/copy", methods=["POST"])
+def storage_copy():
+    user = get_authenticated_user()
+    path = request.form.get("path", "")
+    destination = request.form.get("destination", "")
+    try:
+        copy_storage_path(user["id"], path, destination)
+        return jsonify({"status": "success"})
+    except (ValueError, FileNotFoundError) as exc:
+        return jsonify({"detail": str(exc)}), 400
+
+@api_bp.route("/storage/mkdir", methods=["POST"])
+def storage_mkdir():
+    user = get_authenticated_user()
+    path = request.form.get("path", "")
+    name = request.form.get("name", "")
     try:
         create_storage_directory(user["id"], path, name)
-        return {"status": "success", "folder": name}
+        return jsonify({"status": "success", "folder": name})
     except ValueError as exc:
-        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        return jsonify({"detail": str(exc)}), 400
 
 
-@router.get("/storage/download")
-async def storage_download(request: Request, path: str, background_tasks: BackgroundTasks):
-    user = get_authenticated_user(request)
+@api_bp.route("/storage/download", methods=["GET"])
+def storage_download():
+    user = get_authenticated_user()
+    path = request.args.get("path", "")
     try:
         target = resolve_storage_path(user["id"], path)
         if not target.exists():
             raise FileNotFoundError()
             
         if target.is_dir():
-            zip_path = zip_storage_folder(user["id"], path)
-            # Remove o arquivo temporário após o envio
-            background_tasks.add_task(lambda p: os.remove(p) if os.path.exists(p) else None, str(zip_path))
-            return FileResponse(zip_path, media_type="application/zip", filename=f"{target.name}.zip")
+            zip_path = zip_storage_folder(user["id"], path or "")
+            # Limpeza do temporário em thread separada
+            threading.Timer(60.0, lambda p: os.remove(p) if os.path.exists(p) else None, args=[str(zip_path)]).start()
+            return send_file(zip_path, as_attachment=True, download_name=f"{target.name}.zip")
             
-        return FileResponse(target, media_type="application/octet-stream", filename=target.name)
+        return send_file(target, as_attachment=True, download_name=target.name)
     except FileNotFoundError:
-        raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND, detail="Arquivo não encontrado"
-        )
+        abort(404, description="Arquivo não encontrado")
 
 
-@router.post("/storage/delete")
-async def storage_delete(request: Request, path: str = Form(...)):
-    user = get_authenticated_user(request)
+@api_bp.route("/storage/delete", methods=["POST"])
+def storage_delete():
+    user = get_authenticated_user()
+    path = request.form.get("path", "")
     try:
         delete_storage_path(user["id"], path)
-        return {"deleted": path}
+        return jsonify({"deleted": path})
     except FileNotFoundError:
-        raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND, detail="Arquivo não encontrado"
-        )
+        abort(404, description="Arquivo não encontrado")
     except ValueError as exc:
-        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        return jsonify({"detail": str(exc)}), 400
