@@ -3,30 +3,46 @@
 {% block title %}Home - CasaPy{% endblock %}
 
 {% block content %}
-<section class="home-section">
+<section class="home-section" style="padding: 2rem; width: 100%; max-width: 1200px; margin: 0 auto;">
   <div class="welcome-container">
-    <h2>Bem-vindo, {{ username }}!</h2>
-    <p>Escolha uma seção para continuar:</p>
+    <div style="margin-bottom: 3rem;">
+      <h2>Bem-vindo, <span style="color: var(--accent);">{{ username }}</span>!</h2>
+      <p style="font-size: 1.05rem; color: var(--text-muted); margin-top: 0.5rem;">
+        Seu servidor CasaPy está online e pronto para usar. Escolha uma seção para começar:
+      </p>
+    </div>
 
     <div class="cards-grid">
-      <a href="/info" class="card-link info-card">
+      <a href="/info" class="card-link" style="border-left: 4px solid #f59e0b;">
         <div class="card-icon">📊</div>
-        <h3>Informações do sistema</h3>
-        <p>Veja status, rede e bateria do seu servidor</p>
+        <h3>Informações do Sistema</h3>
+        <p>Monitore o status, conexões de rede e bateria do seu servidor em tempo real</p>
+        <div style="margin-top: auto; color: var(--accent); font-size: 0.9rem; font-weight: 500;">Ver detalhes →</div>
       </a>
 
-      <a href="/storage" class="card-link storage-card">
+      <a href="/storage" class="card-link" style="border-left: 4px solid #3b82f6;">
         <div class="card-icon">💾</div>
-        <h3>Armazenamento remoto</h3>
-        <p>Gerencie seus arquivos e faça upload/download</p>
+        <h3>Armazenamento Remoto</h3>
+        <p>Gerencie seus arquivos com upload, download, busca e organização em pastas</p>
+        <div style="margin-top: auto; color: var(--accent); font-size: 0.9rem; font-weight: 500;">Acessar Drive →</div>
       </a>
 
-      <div class="card info-card">
-        <div class="card-icon">🔧</div>
-        <h3>Em desenvolvimento</h3>
-        <p>Novas funcionalidades em breve</p>
-      </div>
+      <a href="#" class="card-link" style="border-left: 4px solid #8b5cf6; opacity: 0.6; cursor: not-allowed;">
+        <div class="card-icon">⚙️</div>
+        <h3>Configurações</h3>
+        <p>Personalize impressora, empresa, atalhos e layouts (em breve)</p>
+        <div style="margin-top: auto; color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">Em desenvolvimento...</div>
+      </a>
     </div>
+  </div>
+
+  <div style="margin-top: 4rem; padding: 2rem; background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border);">
+    <h3 style="margin-bottom: 1rem; color: var(--accent);">💡 Dica de Uso</h3>
+    <p style="color: var(--text-muted); margin: 0;">
+      CasaPy é um servidor de armazenamento leve para rodar no Termux em aparelhos Android. 
+      Acesse de qualquer dispositivo na mesma rede usando IPv4 ou IPv6. 
+      Todos os arquivos são mantidos isolados por usuário para máxima segurança.
+    </p>
   </div>
 </section>
 {% endblock %}

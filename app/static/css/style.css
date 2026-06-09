@@ -102,6 +102,7 @@ body {
   background: var(--bg);
   position: relative; /* Para posicionamento de elementos internos */
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .app-footer {
@@ -114,6 +115,12 @@ body {
 
 /* Home Section */
 .home-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.welcome-container {
   width: 100%;
 }
 
@@ -171,6 +178,13 @@ body {
 }
 
 /* Info Section */
+.info-section,
+.storage-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .info-section h2,
 .storage-section h2 {
   font-size: 2rem;
@@ -285,8 +299,10 @@ body {
   flex-direction: column;
   gap: 2rem;
   background: rgba(15, 23, 42, 0.3);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  flex-shrink: 0; /* Impede que o flexbox ignore a largura definida */
+  white-space: nowrap;
 }
 
 .drive-sidebar.collapsed {
@@ -375,7 +391,7 @@ body {
   padding: 0;
 }
 
-.drive-sidebar.collapsed .side-nav-item span:last-child {
+.drive-sidebar.collapsed .side-nav-item span:not(:first-child) {
   display: none;
 }
 
@@ -838,11 +854,113 @@ body {
   }
 }
 
-/* Specific for storage page breadcrumb */
-.drive-main .breadcrumb {
-  margin-left: 1rem; /* Keep original margin for breadcrumb in drive-toolbar */
+/* Breadcrumb styling */
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  align-items: center;
 }
+
+.breadcrumb a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.breadcrumb a:hover {
+  color: var(--accent-dark);
+  text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .drive-sidebar {
+    width: var(--sidebar-collapsed-width);
+    padding: 0.75rem 0.5rem;
+  }
+
+  .drive-sidebar:not(.collapsed) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 50;
+    width: var(--sidebar-width);
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+  }
+
+  .drive-main {
+    padding: 1rem;
+  }
+
+  .drive-toolbar {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .drive-search-bar {
+    max-width: 100%;
+  }
+
+  .storage-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .storage-item {
+    padding: 1rem;
+  }
+
+  .breadcrumb {
+    font-size: 0.85rem;
+  }
+}
+
 @media (max-width: 480px) {
+  :root {
+    --sidebar-width: 240px;
+    --sidebar-collapsed-width: 60px;
+  }
+
+  .drive-toolbar {
+    gap: 0.75rem;
+  }
+
+  .drive-search-bar {
+    padding: 0.6rem 1rem;
+  }
+
+  .storage-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .storage-item {
+    padding: 0.75rem;
+  }
+
+  .item-name {
+    font-size: 0.85rem;
+  }
+
+  .item-meta {
+    font-size: 0.75rem;
+  }
+
+  .btn-icon {
+    font-size: 1rem;
+    padding: 0.25rem;
+  }
+
+  .breadcrumb {
+    font-size: 0.8rem;
+  }
+}
   :root {
     --spacing: 0.75rem;
     --radius: 12px;

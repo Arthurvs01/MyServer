@@ -3,64 +3,107 @@
 {% block title %}Informações - CasaPy{% endblock %}
 
 {% block content %}
-<section class="info-section">
-  <h2>Informações do sistema</h2>
+<section class="info-section" style="padding: 2rem; width: 100%; max-width: 1200px; margin: 0 auto;">
+  <div style="margin-bottom: 3rem;">
+    <h2>Informações do Sistema</h2>
+    <p style="color: var(--text-muted); margin-top: 0.5rem;">Dados em tempo real do seu servidor CasaPy rodando em Termux</p>
+  </div>
 
   <div class="info-grid">
     <article class="info-card">
-      <h3>📊 Status do sistema</h3>
+      <h3>📊 Status do Sistema</h3>
       <div class="info-list">
         <div class="info-item">
           <span class="label">Servidor:</span>
-          <span class="value">{{ status.host }}</span>
+          <span class="value" style="font-family: monospace; font-size: 0.9rem;">{{ status.host }}</span>
         </div>
         <div class="info-item">
-          <span class="label">Sistema:</span>
+          <span class="label">Sistema Operacional:</span>
           <span class="value">{{ status.os }} {{ status.release }}</span>
         </div>
         <div class="info-item">
-          <span class="label">Python:</span>
-          <span class="value">{{ status.python_version }}</span>
+          <span class="label">Versão Python:</span>
+          <span class="value" style="font-family: monospace;">{{ status.python_version }}</span>
         </div>
         <div class="info-item">
-          <span class="label">Tempo ativo:</span>
-          <span class="value">{{ status.uptime }}</span>
+          <span class="label">Tempo Ativo:</span>
+          <span class="value" style="color: var(--accent); font-weight: 600;">{{ status.uptime }}</span>
         </div>
       </div>
     </article>
 
     <article class="info-card">
-      <h3>🔋 Bateria</h3>
+      <h3>🔋 Bateria do Dispositivo</h3>
       <div class="info-list">
         <div class="info-item">
-          <span class="label">Status:</span>
-          <span class="value">{{ device.battery.status or device.battery.message }}</span>
+          <span class="label">Estado:</span>
+          <span class="value">{{ device.battery.status or device.battery.message or '—' }}</span>
         </div>
         <div class="info-item">
           <span class="label">Nível:</span>
-          <span class="value">{{ device.battery.capacity or '-' }}</span>
+          <span class="value" style="font-weight: 600; color: {% if device.battery.capacity|int >= 50 %}var(--accent){% elif device.battery.capacity|int >= 20 %}#f59e0b{% else %}var(--danger){% endif %};">
+            {{ device.battery.capacity or '—' }}
+          </span>
         </div>
       </div>
     </article>
 
     <article class="info-card full-width">
-      <h3>🌐 Interfaces de rede</h3>
-      <div class="network-list">
-        {% for iface in device.network.interfaces %}
-        <div class="network-item">
-          <span class="interface-name">{{ iface.name }}</span>
-          <span class="interface-state">{{ iface.state }}</span>
-          <div class="interface-addresses">
-            {% for addr in iface.addresses %}
-            <code>{{ addr }}</code>
-            {% endfor %}
+      <h3>🌐 Interfaces de Rede</h3>
+      {% if device.network.interfaces %}
+        <div class="network-list">
+          {% for iface in device.network.interfaces %}
+          <div class="network-item">
+            <div style="display: flex; justify-content: space-between; align-items: start; gap: 1rem;">
+              <div>
+                <span class="interface-name">{{ iface.name }}</span>
+                <span class="interface-state">{{ iface.state }}</span>
+              </div>
+            </div>
+            <div class="interface-addresses">
+              {% for addr in iface.addresses %}
+              <code>{{ addr }}</code>
+              {% endfor %}
+            </div>
           </div>
+          {% endfor %}
         </div>
-        {% endfor %}
-      </div>
+      {% else %}
+        <div style="color: var(--text-muted); padding: 1.5rem; text-align: center;">
+          Nenhuma interface de rede detectada
+        </div>
+      {% endif %}
     </article>
   </div>
 
-  <button class="btn-secondary" onclick="location.reload()">Atualizar informações</button>
+  <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+    <button class="btn-secondary" onclick="location.reload()">
+      <span>🔄</span> Atualizar Informações
+    </button>
+    <button class="btn-secondary" onclick="copySystemInfo()">
+      <span>📋</span> Copiar Info
+    </button>
+  </div>
 </section>
+
+<script>
+function copySystemInfo() {
+  const status = {
+    host: '{{ status.host }}',
+    os: '{{ status.os }} {{ status.release }}',
+    python: '{{ status.python_version }}',
+    uptime: '{{ status.uptime }}'
+  };
+  
+  const text = Object.entries(status)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join('\n');
+  
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Informações copiadas para a área de transferência!');
+  }).catch(() => {
+    alert('Não foi possível copiar. Tente novamente.');
+  });
+}
+</script>
 {% endblock %}
